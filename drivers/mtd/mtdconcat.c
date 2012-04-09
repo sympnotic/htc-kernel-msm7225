@@ -1,11 +1,25 @@
 /*
  * MTD device concatenation layer
  *
- * (C) 2002 Robert Kaiser <rkaiser@sysgo.de>
+ * Copyright © 2002 Robert Kaiser <rkaiser@sysgo.de>
+ * Copyright © 2002-2010 David Woodhouse <dwmw2@infradead.org>
  *
  * NAND support by Christian Gan <cgan@iders.ca>
  *
- * This code is GPL
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+ *
  */
 
 #include <linux/kernel.h>
@@ -305,7 +319,7 @@ concat_write_oob(struct mtd_info *mtd, loff_t to, struct mtd_oob_ops *ops)
 	if (!(mtd->flags & MTD_WRITEABLE))
 		return -EROFS;
 
-	ops->retlen = ops->oobretlen = 0;
+	ops->retlen = 0;
 
 	for (i = 0; i < concat->num_subdev; i++) {
 		struct mtd_info *subdev = concat->subdev[i];
@@ -320,7 +334,7 @@ concat_write_oob(struct mtd_info *mtd, loff_t to, struct mtd_oob_ops *ops)
 			devops.len = subdev->size - to;
 
 		err = subdev->write_oob(subdev, to, &devops);
-		ops->retlen += devops.oobretlen;
+		ops->retlen += devops.retlen;
 		if (err)
 			return err;
 
@@ -540,10 +554,12 @@ static int concat_lock(struct mtd_info *mtd, loff_t ofs, uint64_t len)
 		else
 			size = len;
 
-		err = subdev->lock(subdev, ofs, size);
-
-		if (err)
-			break;
+		if (subdev->lock) {
+			err = subdev->lock(subdev, ofs, size);
+			if (err)
+				break;
+		} else
+			err = -EOPNOTSUPP;
 
 		len -= size;
 		if (len == 0)
@@ -578,10 +594,12 @@ static int concat_unlock(struct mtd_info *mtd, loff_t ofs, uint64_t len)
 		else
 			size = len;
 
-		err = subdev->unlock(subdev, ofs, size);
-
-		if (err)
-			break;
+		if (subdev->unlock) {
+			err = subdev->unlock(subdev, ofs, size);
+			if (err)
+				break;
+		} else
+			err = -EOPNOTSUPP;
 
 		len -= size;
 		if (len == 0)
