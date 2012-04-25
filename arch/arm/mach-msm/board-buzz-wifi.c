@@ -78,7 +78,11 @@ int __init buzz_init_wifi_mem(void)
 
 static struct resource buzz_wifi_resources[] = {
 	[0] = {
-		.name		= "bcm4329_wlan_irq",
+#ifdef CONFIG_BCMDHD
+		.name		= "bcmdhd_wlan_irq",
+#else
+                .name           = "bcm4329_wlan_irq",
+#endif
 		.start		= MSM_GPIO_TO_INT(BUZZ_GPIO_WIFI_IRQ1),
 		.end		= MSM_GPIO_TO_INT(BUZZ_GPIO_WIFI_IRQ1),
 #ifdef CONFIG_BCM4329_PURE_ANDROID
@@ -100,7 +104,11 @@ static struct wifi_platform_data buzz_wifi_control = {
 };
 
 static struct platform_device buzz_wifi_device = {
+#ifdef CONFIG_BCMDHD
+        .name           = "bcmdhd_wlan",
+#else
         .name           = "bcm4329_wlan",
+#endif
         .id             = 1,
         .num_resources  = ARRAY_SIZE(buzz_wifi_resources),
         .resource       = buzz_wifi_resources,
