@@ -4339,9 +4339,10 @@ wl_iw_get_scan(
 	if ((error = dev_wlc_ioctl(dev, WLC_SCAN_RESULTS, list, len))) {
 		WL_ERROR(("%s: %s : Scan_results ERROR %d\n", dev->name, __FUNCTION__, len));
 		dwrq->length = len;
-		if (g_scan_specified_ssid)
+		if (g_scan_specified_ssid){
+			g_scan_specified_ssid = 0;
 			kfree(list);
-		wl_iw_fixed_scan(dev);
+		}
 		return 0;
 	}
 	list->buflen = dtoh32(list->buflen);
@@ -9058,7 +9059,13 @@ static int ap_fail_count = 0;
 static int
 _ap_protect_sysioc_thread(void *data)
 {
+#if 0
 	int isup;
+#else
+	char iovbuf[WL_EVENTING_MASK_LEN + 12]; /* Room for "event_msgs" + '\0' + bitvec */
+	static unsigned int txphyerr = 0;
+	unsigned int curr_txphyerr = 0;
+#endif
 	int ret = 0;
 	DAEMONIZE("ap_sysioc");
 
@@ -9074,14 +9081,32 @@ _ap_protect_sysioc_thread(void *data)
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27))
 	rtnl_lock();
 #endif
+#if 0
 		if ((ret = dev_wlc_ioctl(priv_dev, WLC_GET_UP, &isup, sizeof(isup))) != 0)
 				ap_fail_count++;
 		else
 				ap_fail_count = 0;
+#else
+		strcpy(iovbuf, "txphyerr");
+		if ((ret = dev_wlc_ioctl(priv_dev, WLC_GET_VAR, iovbuf, sizeof(iovbuf))) < 0)
+			ap_fail_count++;
+		else {
+			curr_txphyerr = *(unsigned int*)iovbuf;
+			//myprintf("%s: curr_txphyerr(%d)/txphyerr(%d)\n", __FUNCTION__, curr_txphyerr, txphyerr);
+			if ( (curr_txphyerr - txphyerr) > 5000  ) {
+				myprintf("%s: curr_txphyerr(%d) is over txphyerr (%d). fail count + 1\n", __FUNCTION__, curr_txphyerr, txphyerr);
+				ap_fail_count++;
+			} else {
+				ap_fail_count = 0;
+			}
+			txphyerr = curr_txphyerr;
+		}
+#endif
 
 		if (ap_fail_count == AP_MAX_FAIL_COUNT) {
 			wl_iw_restart(priv_dev);
 			wl_iw_ap_restart();
+			txphyerr = 0;
 		}
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27))

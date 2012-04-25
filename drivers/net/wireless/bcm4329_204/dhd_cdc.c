@@ -265,12 +265,16 @@ dhd_prot_ioctl(dhd_pub_t *dhd, int ifidx, wl_ioctl_t * ioc, void * buf, int len)
 {
 	dhd_prot_t *prot = dhd->prot;
 	int ret = -1;
+	int res = 0;
 
 	if (dhd->busstate == DHD_BUS_DOWN) {
 		DHD_ERROR(("%s : bus is down. we have nothing to do\n", __FUNCTION__));
 		return ret;
 	}
-	dhd_os_proto_block(dhd);
+
+	if ((res = dhd_os_proto_block(dhd) == -1)) {
+		DHD_ERROR(("%s: down proto_sem timeout \n", __FUNCTION__));
+	}
 
 	DHD_TRACE(("%s: Enter\n", __FUNCTION__));
 
@@ -320,7 +324,8 @@ dhd_prot_ioctl(dhd_pub_t *dhd, int ifidx, wl_ioctl_t * ioc, void * buf, int len)
 	prot->pending = FALSE;
 
 done:
-	dhd_os_proto_unblock(dhd);
+	if (!res)
+		dhd_os_proto_unblock(dhd);
 
 	return ret;
 }
@@ -695,9 +700,13 @@ char iovbuf[32];
 	char iovbuf[32];
 	int bcn_li_dtim = 3;
 #endif
+	int res = 0;
 
 	if (dhd && dhd->up) {
-		dhd_os_proto_block(dhd);
+		if ((res = dhd_os_proto_block(dhd) == -1)) {
+			DHD_ERROR(("%s: down proto_sem timeout \n", __FUNCTION__));
+		}
+
 		if (value) {
 #if 0
 			if (usb_get_connect_type() == 0) {
@@ -780,7 +789,8 @@ char iovbuf[32];
 			/* indicate wl_iw screen on */
 			wl_iw_set_screen_off(0);
 		}
-		dhd_os_proto_unblock(dhd);
+		if (!res)
+			dhd_os_proto_unblock(dhd);
 	}
 
 	return 0;
@@ -1036,10 +1046,14 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 	wl_keep_alive_pkt_t keep_alive_pkt;
 	wl_keep_alive_pkt_t *keep_alive_pktp;
 	int ht_wsec_restrict = WLC_HT_TKIP_RESTRICT | WLC_HT_WEP_RESTRICT;
+	int res = 0;
 	pdhd = dhd;
 
 
-	dhd_os_proto_block(dhd);
+	if ((res = dhd_os_proto_block(dhd) == -1)) {
+		DHD_ERROR(("%s: down proto_sem timeout \n", __FUNCTION__));
+	}
+
 #ifdef HTC_KlocWork
     memset(&keep_alive_pkt, 0, sizeof(keep_alive_pkt));
 #endif
@@ -1058,7 +1072,8 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 	strcpy(iovbuf, "cur_etheraddr");
 	if ((ret = dhdcdc_query_ioctl(dhd, 0, WLC_GET_VAR, iovbuf, sizeof(iovbuf))) < 0) {
 		DHD_ERROR(("%s: can't get MAC address , error=%d\n", __FUNCTION__, ret));
-		dhd_os_proto_unblock(dhd);
+		if (!res)
+			dhd_os_proto_unblock(dhd);
 		return BCME_NOTUP;
 	}
 	memcpy(dhd->mac.octet, iovbuf, ETHER_ADDR_LEN);
@@ -1193,7 +1208,8 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 
 	if (mask_size != pattern_size) {
 		DHD_ERROR(("Mask and pattern not the same size\n"));
-		dhd_os_proto_unblock(dhd);
+		if (!res)
+			dhd_os_proto_unblock(dhd);
 		return -EINVAL;
 	}
 
@@ -1285,15 +1301,16 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 
 
 	/* set scanresults_minrssi */
-	ret = -88;
-	bcm_mkiovar("scanresults_minrssi", (char *)&ret, 4, iovbuf, sizeof(iovbuf));
-	dhdcdc_set_ioctl(dhd, 0, WLC_SET_VAR, iovbuf, sizeof(iovbuf));
+	//ret = -88;
+	//bcm_mkiovar("scanresults_minrssi", (char *)&ret, 4, iovbuf, sizeof(iovbuf));
+	//dhdcdc_set_ioctl(dhd, 0, WLC_SET_VAR, iovbuf, sizeof(iovbuf));
 
 	ret = 5;
 	bcm_mkiovar("assoc_retry_max", (char *)&ret, 4, iovbuf, sizeof(iovbuf));
 	dhdcdc_set_ioctl(dhd, 0, WLC_SET_VAR, iovbuf, sizeof(iovbuf));
 
-	dhd_os_proto_unblock(dhd);
+	if (!res)
+		dhd_os_proto_unblock(dhd);
 	return 0;
 }
 

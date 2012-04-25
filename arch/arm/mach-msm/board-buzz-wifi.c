@@ -100,6 +100,7 @@ static struct wifi_platform_data buzz_wifi_control = {
 	.mem_prealloc   = buzz_wifi_mem_prealloc,
 #ifndef CONFIG_BCM4329_PURE_ANDROID
 	.dot11n_enable  = 1,
+	.cscan_enable	= 1,
 #endif
 };
 
