@@ -12,7 +12,7 @@
 #ifdef CONFIG_BCM4329_PURE_ANDROID
 #include <linux/wlan_plat.h>
 #else
-#include <linux/wifi_tiwlan.h>
+#include <linux/wifi_bcm.h>
 #endif
 
 #include "board-buzz.h"
