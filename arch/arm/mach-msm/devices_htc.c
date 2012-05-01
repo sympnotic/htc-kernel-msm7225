@@ -190,7 +190,6 @@ static struct resource kgsl_3d0_resources[] = {
 		.flags	= IORESOURCE_IRQ,
 	},
 };
-#endif
 
 static struct kgsl_device_platform_data kgsl_3d0_pdata = {
 	.pwr_data = {
@@ -228,7 +227,7 @@ struct platform_device msm_kgsl_3d0 = {
          },
 };
 
-#if 0
+#if !defined(CONFIG_ARCH_MSM7X30)
 #define PWR_RAIL_GRP_CLK               8
 static int kgsl_power_rail_mode(int follow_clk)
 {
@@ -246,6 +245,8 @@ static int kgsl_power(bool on)
        cmd = on ? PCOM_CLKCTL_RPC_RAIL_ENABLE : PCOM_CLKCTL_RPC_RAIL_DISABLE;
        return msm_proc_comm(cmd, &rail_id, NULL);
 }
+#endif
+
 #endif
 
 
