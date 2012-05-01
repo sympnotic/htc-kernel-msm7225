@@ -23,6 +23,9 @@ config DEVTMPFS
 	  This creates a tmpfs/ramfs filesystem instance early at bootup.
 	  In this filesystem, the kernel driver core maintains device
 	  nodes with their defaultconfig GENLOCK
+
+
+config GENLOCK
 	bool "Enable a generic cross-process locking mechanism"
 	depends on ANON_INODES
 	help
