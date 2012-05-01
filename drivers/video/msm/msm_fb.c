@@ -989,12 +989,7 @@ static int msmfb_ioctl(struct fb_info *p, unsigned int cmd, unsigned long arg)
 		break;
 #ifdef CONFIG_FB_MSM_OVERLAY
 	case MSMFB_OVERLAY_GET:
-		if(!atomic_read(&mdpclk_on)) {
-			PR_DISP_WARN("MSMFB_OVERLAY_GET during suspend\n");
-			ret = -EINVAL;
-		} else
-			ret = msmfb_overlay_get(p, argp);
-		PR_DISP_INFO("MSMFB_OVERLAY_GET ret=%d\n", ret);
+		ret = msmfb_overlay_get(p, argp);
 		break;
 	case MSMFB_OVERLAY_SET:
 		if(!atomic_read(&mdpclk_on)) {
@@ -1106,11 +1101,7 @@ static struct file_operations debug_fops = {
 };
 #endif
 
-#if defined(CONFIG_MACH_BAHAMAS) || defined(CONFIG_MACH_BUZZ) || defined(CONFIG_MACH_HERO)
-#define BITS_PER_PIXEL_DEF 16
-#else
 #define BITS_PER_PIXEL_DEF 32
-#endif
 
 static void setup_fb_info(struct msmfb_info *msmfb)
 {
@@ -1140,18 +1131,17 @@ static void setup_fb_info(struct msmfb_info *msmfb)
 	fb_info->var.yoffset = 0;
 
 	if (msmfb->panel->caps & MSMFB_CAP_PARTIAL_UPDATES) {
-		/*
-		 * Set the param in the fixed screen, so userspace can't
+		/* set the param in the fixed screen, so userspace can't
 		 * change it. This will be used to check for the
-		 * capability.
-		 */
+		 * capability. */
+
+		/* FIX ME: every panel support partial update?
 		fb_info->fix.reserved[0] = 0x5444;
 		fb_info->fix.reserved[1] = 0x5055;
+		*/
 
-		/*
-		 * This preloads the value so that if userspace doesn't
-		 * change it, it will be a full update
-		 */
+		/* This preloads the value so that if userspace doesn't
+		 * change it, it will be a full update */
 		fb_info->var.reserved[0] = 0x54445055;
 		fb_info->var.reserved[1] = 0;
 		fb_info->var.reserved[2] = (uint16_t)msmfb->xres |
@@ -1245,6 +1235,7 @@ static int msmfb_probe(struct platform_device *pdev)
 	msmfb->xres = panel->fb_data->xres;
 	msmfb->yres = panel->fb_data->yres;
 	msmfb->overrides = panel->fb_data->overrides;
+	setup_fb_info(msmfb);
 	ret = setup_fbmem(msmfb, pdev);
 	if (ret)
 		goto error_setup_fbmem;
@@ -1253,8 +1244,6 @@ static int msmfb_probe(struct platform_device *pdev)
 	/* Jay, 8/1/09' */
 	msmfb_set_var(msmfb->fb->screen_base, 0);
 #endif
-
-	setup_fb_info(msmfb);
 
 	spin_lock_init(&msmfb->update_lock);
 	mutex_init(&msmfb->panel_init_lock);
@@ -1314,12 +1303,6 @@ static int msmfb_probe(struct platform_device *pdev)
 	msmfb->fake_vsync.function = msmfb_fake_vsync;
 
 	ret = register_framebuffer(fb);
-
-	if(fb->node == 0)
-		mdp->fb0 = msmfb->fb;
-	else
-		mdp->fb1 = msmfb->fb;
-
 	if (ret)
 		goto error_register_framebuffer;
 

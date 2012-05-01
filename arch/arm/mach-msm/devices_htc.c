@@ -61,11 +61,7 @@ void __init msm_add_devices(void)
 
 static struct android_pmem_platform_data pmem_pdata = {
 	.name = "pmem",
-#if defined(CONFIG_ARCH_MSM7225)
-	.no_allocator = PMEM_ALLOCATORTYPE_BUDDYBESTFIT,
-#else
 	.no_allocator = PMEM_ALLOCATORTYPE_ALLORNOTHING,
-#endif
 	.cached = 1,
 };
 
@@ -81,11 +77,7 @@ static struct android_pmem_platform_data pmem_adsp_pdata = {
 
 static struct android_pmem_platform_data pmem_camera_pdata = {
 	.name = "pmem_camera",
-#if defined(CONFIG_ARCH_MSM7225)
-	.no_allocator = PMEM_ALLOCATORTYPE_BUDDYBESTFIT,
-#else
 	.no_allocator = PMEM_ALLOCATORTYPE_BITMAP,
-#endif
 	.cached = 0,
 };
 
@@ -174,104 +166,59 @@ static struct platform_device hw3d_device = {
 };
 #endif
 
-#if defined(CONFIG_GPU_MSM_KGSL) && !defined(CONFIG_ARCH_MSM8X60)
-static struct resource msm_kgsl_resources[] = {
+
+static struct resource kgsl_3d0_resources[] = {
 	{
-		.name	= "kgsl_reg_memory",
+		.name	= KGSL_3D0_REG_MEMORY,
 		.start	= MSM_GPU_REG_PHYS,
 		.end	= MSM_GPU_REG_PHYS + MSM_GPU_REG_SIZE - 1,
 		.flags	= IORESOURCE_MEM,
 	},
 	{
-		.name	= "kgsl_phys_memory",
-		.flags	= IORESOURCE_MEM,
-	},
-	{
-		.name   = "kgsl_yamato_irq",
-#ifdef CONFIG_ARCH_MSM7X30
-		.start  = INT_GRP_3D,
-		.end    = INT_GRP_3D,
-#else
+		.name   = KGSL_3D0_IRQ,
 		.start	= INT_GRAPHICS,
 		.end	= INT_GRAPHICS,
-#endif
 		.flags	= IORESOURCE_IRQ,
 	},
-#ifdef CONFIG_ARCH_MSM7X30
-	{
-		.name   = "kgsl_2d0_reg_memory",
-		.start  = MSM_GPU_2D_REG_PHYS, /* Z180 base address */
-		.end    = MSM_GPU_2D_REG_PHYS + MSM_GPU_2D_REG_SIZE - 1,
-		.flags  = IORESOURCE_MEM,
-	},
-	{
-		.name   = "kgsl_2d0_irq",
-		.start  = INT_GRP_2D,
-		.end    = INT_GRP_2D,
-		.flags  = IORESOURCE_IRQ,
-	},
-#endif
 };
 
-#ifdef CONFIG_ARCH_MSM7X30
-static struct kgsl_platform_data kgsl_pdata = {
-#ifdef CONFIG_MSM_NPA_SYSTEM_BUS
-	/* NPA Flow IDs */
-	.high_axi_3d = MSM_AXI_FLOW_3D_GPU_HIGH,
-	.high_axi_2d = MSM_AXI_FLOW_2D_GPU_HIGH,
-#else
-	/* AXI rates in KHz */
-	.high_axi_3d = 192000,
-	.high_axi_2d = 192000,
-#endif
-	.max_grp2d_freq = 0,
-	.min_grp2d_freq = 0,
-	.set_grp2d_async = NULL, /* HW workaround, run Z180 SYNC @ 192 MHZ */
-	.max_grp3d_freq = 245760000,
-	.min_grp3d_freq = 192000000,
-	.set_grp3d_async = set_grp3d_async,
-	.imem_clk_name = "imem_clk",
-	.grp3d_clk_name = "grp_clk",
-	.grp2d0_clk_name = "grp_2d_clk",
-};
-#else	/* 7x27 */
-static struct kgsl_platform_data kgsl_pdata = {
-	.high_axi_3d = 160000,
-	.max_grp2d_freq = 0,
-	.min_grp2d_freq = 0,
-	.set_grp2d_async = NULL,
-	.max_grp3d_freq = 0,
-	.min_grp3d_freq = 0,
-	.set_grp3d_async = NULL,
-	.imem_clk_name = "imem_clk",
-	.grp3d_clk_name = "grp_clk",
-	.grp3d_pclk_name = "grp_pclk",
-	.grp2d0_clk_name = NULL,
-	.idle_timeout_3d = HZ/5,
-	.idle_timeout_2d = 0,
-#ifdef CONFIG_KGSL_PER_PROCESS_PAGE_TABLE
-	.pt_va_size = SZ_32M,
-	/* Maximum of 32 concurrent processes */
-	.pt_max_count = 32,
-#else
-	.pt_va_size = SZ_128M,
-	/* We only ever have one pagetable for everybody */
-	.pt_max_count = 1,
-#endif
-};
-#endif
-
-static struct platform_device msm_kgsl_device = {
-	.name		= "kgsl",
-	.id		= -1,
-	.resource	= msm_kgsl_resources,
-	.num_resources	= ARRAY_SIZE(msm_kgsl_resources),
-	.dev = {
-		.platform_data = &kgsl_pdata,
+static struct kgsl_device_platform_data kgsl_3d0_pdata = {
+	.pwr_data = {
+		.pwrlevel = {
+			{
+				.gpu_freq = 128000000,
+				.bus_freq = 128000000,
+			},
+		},
+		.init_level = 0,
+		.num_levels = 1,
+		.set_grp_async = NULL,
+		.idle_timeout = HZ/5,
+		.nap_allowed = true,
+	},
+	.clk = {
+		.name = {
+			.clk = "grp_clk",
+			.pclk = "grp_pclk",
+		},
+	},
+	.imem_clk_name = {
+		.clk = "imem_clk",
+		.pclk = NULL,
 	},
 };
 
-#if !defined(CONFIG_ARCH_MSM7X30)
+struct platform_device msm_kgsl_3d0 = {
+         .name = "kgsl-3d0",
+         .id = 0,
+         .num_resources = ARRAY_SIZE(kgsl_3d0_resources),
+         .resource = kgsl_3d0_resources,
+         .dev = {
+                 .platform_data = &kgsl_3d0_pdata,
+         },
+};
+
+#if 0
 #define PWR_RAIL_GRP_CLK               8
 static int kgsl_power_rail_mode(int follow_clk)
 {
@@ -291,7 +238,6 @@ static int kgsl_power(bool on)
 }
 #endif
 
-#endif
 
 void __init msm_add_mem_devices(struct msm_pmem_setting *setting)
 {
@@ -337,7 +283,7 @@ void __init msm_add_mem_devices(struct msm_pmem_setting *setting)
 		platform_device_register(&ram_console_device);
 	}
 
-#if defined(CONFIG_GPU_MSM_KGSL)&& !defined(CONFIG_ARCH_MSM8X60)
+#if defined(CONFIG_GPU_MSM_KGSL) && !defined(CONFIG_ARCH_MSM8X60)
 	if (setting->kgsl_size) {
 		msm_kgsl_resources[1].start = setting->kgsl_start;
 		msm_kgsl_resources[1].end = setting->kgsl_start
@@ -346,11 +292,11 @@ void __init msm_add_mem_devices(struct msm_pmem_setting *setting)
  * first then power on gpu, thus we move power on
  * into kgsl driver
  */
-#if !defined(CONFIG_ARCH_MSM7X30)
+#if 0
 		kgsl_power_rail_mode(0);
 		kgsl_power(true);
 #endif
-		platform_device_register(&msm_kgsl_device);
+		platform_device_register(&msm_kgsl_3d0);
 	}
 #endif
 
@@ -767,33 +713,6 @@ int __init parse_tag_engineerid(const struct tag *tags)
 }
 __tagtable(ATAG_ENGINEERID, parse_tag_engineerid);
 
-#define ATAG_MONODIE 0x4d534D76
-static int mono_die;;
-int __init parse_tag_monodie(const struct tag *tags)
-{
-        int find = 0;
-        struct tag *t = (struct tag *)tags;
-
-        for (; t->hdr.size; t = tag_next(t)) {
-                if (t->hdr.tag == ATAG_MONODIE) {
-                        printk(KERN_DEBUG "find the flash id tag\n");
-                        find = 1;
-                        break;
-                }
-        }
-
-        if (find)
-                mono_die = t->u.revision.rev;
-        printk(KERN_DEBUG "parse_tag_monodie: mono-die = 0x%x\n", mono_die);
-        return mono_die;
-}
-__tagtable(ATAG_MONODIE, parse_tag_monodie);
-
-int __init board_mcp_monodie(void)
-{
-        return mono_die;
-}
-
 #define ATAG_MFG_GPIO_TABLE 0x59504551
 int __init parse_tag_mfg_gpio_table(const struct tag *tags)
 {
@@ -811,23 +730,6 @@ char * board_get_mfg_sleep_gpio_table(void)
         return mfg_gpio_table;
 }
 EXPORT_SYMBOL(board_get_mfg_sleep_gpio_table);
-
-static char *qwerty_color_tag = NULL;
-static int __init board_set_qwerty_color_tag(char *get_qwerty_color)
-{
-	if (strlen(get_qwerty_color))
-		qwerty_color_tag = get_qwerty_color;
-	else
-		qwerty_color_tag = NULL;
-	return 1;
-}
-__setup("androidboot.qwerty_color=", board_set_qwerty_color_tag);
-
-void board_get_qwerty_color_tag(char **ret_data)
-{
-	*ret_data = qwerty_color_tag;
-}
-EXPORT_SYMBOL(board_get_qwerty_color_tag);
 
 static char *emmc_tag;
 static int __init board_set_emmc_tag(char *get_hboot_emmc)
