@@ -61,7 +61,11 @@ void __init msm_add_devices(void)
 
 static struct android_pmem_platform_data pmem_pdata = {
 	.name = "pmem",
+#if defined(CONFIG_ARCH_MSM7225)
+	.no_allocator = PMEM_ALLOCATORTYPE_BUDDYBESTFIT,
+#else
 	.no_allocator = PMEM_ALLOCATORTYPE_ALLORNOTHING,
+#endif
 	.cached = 1,
 };
 
@@ -77,7 +81,11 @@ static struct android_pmem_platform_data pmem_adsp_pdata = {
 
 static struct android_pmem_platform_data pmem_camera_pdata = {
 	.name = "pmem_camera",
+#if defined(CONFIG_ARCH_MSM7225)
+	.no_allocator = PMEM_ALLOCATORTYPE_BUDDYBESTFIT,
+#else
 	.no_allocator = PMEM_ALLOCATORTYPE_BITMAP,
+#endif
 	.cached = 0,
 };
 
@@ -167,6 +175,7 @@ static struct platform_device hw3d_device = {
 #endif
 
 
+#if defined(CONFIG_GPU_MSM_KGSL) && !defined(CONFIG_ARCH_MSM8X60)
 static struct resource kgsl_3d0_resources[] = {
 	{
 		.name	= KGSL_3D0_REG_MEMORY,
@@ -181,6 +190,7 @@ static struct resource kgsl_3d0_resources[] = {
 		.flags	= IORESOURCE_IRQ,
 	},
 };
+#endif
 
 static struct kgsl_device_platform_data kgsl_3d0_pdata = {
 	.pwr_data = {
