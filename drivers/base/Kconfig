@@ -22,7 +22,22 @@ config DEVTMPFS
 	help
 	  This creates a tmpfs/ramfs filesystem instance early at bootup.
 	  In this filesystem, the kernel driver core maintains device
-	  nodes with their default names and permissions for all
+	  nodes with their defaultconfig GENLOCK
+
+
+config GENLOCK
+	bool "Enable a generic cross-process locking mechanism"
+	depends on ANON_INODES
+	help
+	  Enable a generic cross-process locking API to provide protection
+	  for shared memory objects such as graphics buffers.
+
+config GENLOCK_MISCDEVICE
+	bool "Enable a misc-device for userspace to access the genlock engine"
+	depends on GENLOCK
+	help
+	  Create a miscdevice for the purposes of allowing userspace to create
+	  and interact with locks created using genlock. names and permissions for all
 	  registered devices with an assigned major/minor number.
 	  Userspace can modify the filesystem content as needed, add
 	  symlinks, and apply needed permissions.
