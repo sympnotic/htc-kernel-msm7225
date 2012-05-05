@@ -949,9 +949,13 @@ static inline unsigned int read_timestamp(void)
 {
 	unsigned int tick = 0;
 
+	/* no barriers necessary as the read value is a dependency for the
+	 * comparison operation so the processor shouldn't be able to
+	 * reorder things
+	 */
 	do {
-		tick = readl(TIMESTAMP_ADDR);
-	} while (tick != readl(TIMESTAMP_ADDR));
+		tick = __raw_readl(TIMESTAMP_ADDR);
+	} while (tick != __raw_readl(TIMESTAMP_ADDR));
 
 	return tick;
 }
@@ -1007,6 +1011,7 @@ static void smem_log_event_from_user(struct smem_log_inst *inst,
 	}
 
  out:
+	wmb();
 	remote_spin_unlock_irqrestore(inst->remote_spinlock, flags);
 }
 
@@ -1042,6 +1047,7 @@ static void _smem_log_event(
 	if (next_idx >= num)
 		next_idx = 0;
 	*_idx = next_idx;
+	wmb();
 
 	remote_spin_unlock_irqrestore(lock, flags);
 }
@@ -1084,7 +1090,7 @@ static void _smem_log_event6(
 	if (next_idx >= num)
 		next_idx = 0;
 	*_idx = next_idx;
-
+	wmb();
 	remote_spin_unlock_irqrestore(lock, flags);
 }
 
@@ -1309,7 +1315,7 @@ static ssize_t smem_log_write(struct file *fp, const char __user *buf,
 	int ret;
 	const char delimiters[] = " ,;";
 	char locbuf[256] = {0};
-	uint32_t val[10];
+	uint32_t val[10] = {0};
 	int vals = 0;
 	char *token;
 	char *running;
