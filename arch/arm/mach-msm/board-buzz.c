@@ -715,8 +715,10 @@ static struct resource msm_camera_resources[] = {
 		.flags	= IORESOURCE_MEM,
 	},
 	{
+	/*
 		.start	= INT_VFE,
 		.end	= INT_VFE,
+	*/
 		.flags	= IORESOURCE_IRQ,
 	},
 };

@@ -74,6 +74,7 @@
 #include <asm/tlbflush.h>
 
 #include <trace/events/sched.h>
+#include <linux/sched.h>
 
 /*
  * Protected counters by write_lock_irq(&tasklist_lock)
@@ -942,6 +943,8 @@ static int copy_signal(unsigned long clone_flags, struct task_struct *tsk)
 	sched_autogroup_fork(sig);
 
 	sig->oom_adj = current->signal->oom_adj;
+
+	mutex_init(&sig->cred_guard_mutex);
 
 	return 0;
 }
