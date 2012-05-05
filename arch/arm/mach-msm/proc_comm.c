@@ -25,7 +25,7 @@
 #include "proc_comm.h"
 
 #if defined(CONFIG_ARCH_MSM7X30) || defined(CONFIG_ARCH_MSM8X60)
-#define MSM_TRIG_A2M_INT(n) (writel(1 << n, MSM_GCC_BASE + 0x8))
+#define MSM_TRIG_A2M_INT(n) (writel_relaxed(1 << n, MSM_GCC_BASE + 0x8))
 #endif
 
 #define MSM_A2M_INT(n) (MSM_CSR_BASE + 0x400 + (n) * 4)
@@ -38,8 +38,10 @@ static inline void notify_other_proc_comm(void)
 #elif defined(CONFIG_ARCH_MSM8X60)
 	MSM_TRIG_A2M_INT(5);
 #else
-	writel(1, MSM_A2M_INT(6));
+	writel_relaxed(1, MSM_A2M_INT(6));
 #endif
+	/* Make sure the write completes before returning */
+	wmb();
 }
 
 #define APP_COMMAND 0x00
@@ -69,14 +71,16 @@ int (*msm_check_for_modem_crash)(void);
  * restart so the msm_proc_comm() routine can restart
  * the operation from the beginning.
  */
-static int proc_comm_wait_for(void __iomem *addr, unsigned value)
+static int proc_comm_wait_for(unsigned addr, unsigned value)
 {
 #ifdef CONFIG_PROC_COMM_TIMEOUT_RESET
 	unsigned long long timeout = TIMEOUT;
 #endif
 
-	for (;;) {
-		if (readl(addr) == value)
+	while (1) {
+		/* Barrier here prevents excessive spinning */
+		mb();
+		if (readl_relaxed(addr) == value)
 			return 0;
 
 		if (msm_check_for_modem_crash)
@@ -100,46 +104,48 @@ static int proc_comm_wait_for(void __iomem *addr, unsigned value)
 			timeout = TIMEOUT;
 		}
 #endif
+		udelay(5);
 	}
 }
 
 int msm_proc_comm(unsigned cmd, unsigned *data1, unsigned *data2)
 {
-	void __iomem *base = MSM_SHARED_RAM_BASE;
+	unsigned base = (unsigned)MSM_SHARED_RAM_BASE;
 	unsigned long flags;
 	int ret;
 
 	spin_lock_irqsave(&proc_comm_lock, flags);
 
-	for (;;) {
-		if (proc_comm_wait_for(base + MDM_STATUS, PCOM_READY))
-			continue;
+again:
+	if (proc_comm_wait_for(base + MDM_STATUS, PCOM_READY))
+		goto again;
 
-		writel(cmd, base + APP_COMMAND);
-		writel(data1 ? *data1 : 0, base + APP_DATA1);
-		writel(data2 ? *data2 : 0, base + APP_DATA2);
+	writel_relaxed(cmd, base + APP_COMMAND);
+	writel_relaxed(data1 ? *data1 : 0, base + APP_DATA1);
+	writel_relaxed(data2 ? *data2 : 0, base + APP_DATA2);
 
-		notify_other_proc_comm();
+	/* Make sure the writes complete before notifying the other side */
+	dsb();
+	notify_other_proc_comm();
 
-		if (proc_comm_wait_for(base + APP_COMMAND, PCOM_CMD_DONE))
-			continue;
+	if (proc_comm_wait_for(base + APP_COMMAND, PCOM_CMD_DONE))
+		goto again;
 
-		if (readl(base + APP_STATUS) != PCOM_CMD_FAIL) {
-			if (data1)
-				*data1 = readl(base + APP_DATA1);
-			if (data2)
-				*data2 = readl(base + APP_DATA2);
-			ret = 0;
-		} else {
-			ret = -EIO;
-		}
-		break;
+	if (readl_relaxed(base + APP_STATUS) == PCOM_CMD_SUCCESS) {
+		if (data1)
+			*data1 = readl_relaxed(base + APP_DATA1);
+		if (data2)
+			*data2 = readl_relaxed(base + APP_DATA2);
+		ret = 0;
+	} else {
+		ret = -EIO;
 	}
 
-	writel(PCOM_CMD_IDLE, base + APP_COMMAND);
+	writel_relaxed(PCOM_CMD_IDLE, base + APP_COMMAND);
 
+	/* Make sure the writes complete before returning */
+	dsb();
 	spin_unlock_irqrestore(&proc_comm_lock, flags);
-
 	return ret;
 }
 
