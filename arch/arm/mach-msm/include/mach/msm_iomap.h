@@ -50,7 +50,7 @@
 #elif defined(CONFIG_ARCH_MSM8X60)
 #include "msm_iomap-8x60.h"
 #else
-#include "msm_iomap-7xxx.h"
+#include "msm_iomap-7x00.h"
 #endif
 
 #endif
