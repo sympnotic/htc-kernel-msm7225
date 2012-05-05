@@ -38,39 +38,19 @@
 
 #define ATAG_MSM_PARTITION 0x4d534D70 /* MSMp */
 
-struct msm_ptbl_entry
-{
+struct msm_ptbl_entry {
 	char name[16];
 	__u32 offset;
 	__u32 size;
 	__u32 flags;
 };
 
-#define MSM_MAX_PARTITIONS 16
+#define MSM_MAX_PARTITIONS 8
 
 static struct mtd_partition msm_nand_partitions[MSM_MAX_PARTITIONS];
 static char msm_nand_names[MSM_MAX_PARTITIONS * 16];
 
 extern struct flash_platform_data msm_nand_data;
-
-int emmc_partition_read_proc(char *page, char **start, off_t off,
-			   int count, int *eof, void *data)
-{
-	struct mtd_partition *ptn = msm_nand_partitions;
-	char *p = page;
-	int i;
-	uint64_t offset;
-	uint64_t size;
-
-	p += sprintf(p, "dev:        size     erasesize name\n");
-	for (i = 0; i < MSM_MAX_PARTITIONS && ptn->name; i++, ptn++) {
-		offset = ptn->offset;
-		size = ptn->size;
-		p += sprintf(p, "mmcblk0p%llu: %08llx %08x \"%s\"\n", offset, size * 512, 512, ptn->name);
-	}
-
-	return p - page;
-}
 
 static int __init parse_tag_msm_partition(const struct tag *tag)
 {
