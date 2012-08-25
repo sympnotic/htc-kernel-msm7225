@@ -1,9 +1,9 @@
-/* drivers/video/msm_fb/mddi_client_s6d0154.c
+/* drivers/video/msm_fb/mddi_client_eid0154.c
  *
  * Support for eid mddi client devices with Samsung S6D0154
  *
  * Copyright (C) 2007 HTC Incorporated
- * Author: Wade Wu (wade_wu@htc.com)
+ * Author: Jay Tu (jay_tu@htc.com)
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -31,11 +31,9 @@
 #include <asm/mach-types.h>
 #include "../../../arch/arm/mach-msm/proc_comm.h"
 #include <mach/msm_fb.h>
-#include <mach/msm_panel.h>
 #include <mach/msm_iomap.h>
 #include <mach/debug_display.h>
-
-
+#define printk(arg,...)
 #if 0
 #define B(s...) printk(s)
 #else
@@ -51,36 +49,71 @@
 
 static DECLARE_WAIT_QUEUE_HEAD(samsung_vsync_wait);
 
-#define INTERVAL_ADJUSTING	300
-
 struct panel_info {
 	struct msm_mddi_client_data *client_data;
 	struct platform_device pdev;
 	struct msm_panel_data panel_data;
-	struct work_struct adjust_panel_work;
 	struct msmfb_callback *fb_callback;
 	struct wake_lock idle_lock;
-	atomic_t frame_counter;
 	int samsung_got_int;
+	atomic_t depth;
+	int vsync_counter;
 };
 
 static struct clk *ebi1_clk;
 
-static void samsung_dump_vsync(void)
+static void
+samsung_sendout_region(struct panel_info *panel)
 {
-	B(KERN_DEBUG "%s: enter.\n", __func__);
+	struct msm_mddi_client_data *client = panel->client_data;
+	struct msm_mddi_bridge_platform_data *bridge =
+						client->private_client_data;
+
+	if (bridge->adjust) {
+		wake_lock(&panel->idle_lock);
+		bridge->adjust(client);
+		wake_unlock(&panel->idle_lock);
+		panel->vsync_counter = VSYNC_COUNTER;
+	}
+	if (atomic_read(&panel->depth) <= 0) {
+		atomic_inc(&panel->depth);
+		enable_irq(gpio_to_irq(97));
+	}
 }
 
-static void samsung_adjust_work(struct work_struct *work){
-	struct panel_info * panel = container_of(work, struct panel_info, adjust_panel_work);
-	struct msm_mddi_client_data *client_data = panel->client_data;
-	struct msm_mddi_bridge_platform_data *bridge_data =
-		client_data->private_client_data;
+static void
+samsung_update_framedata(struct panel_info *panel)
+{
+	if (panel->fb_callback) {
+		panel->fb_callback->func(panel->fb_callback);
+		panel->fb_callback = NULL;
+		panel->samsung_got_int = 0;
+	}
+}
 
-	if(bridge_data->adjust)
-		bridge_data->adjust(client_data);
+static void samsung_dump_vsync(void)
+{
+	PR_DISP_INFO("STATUS %d %s EBI1 %lu\n",
+			readl(VSYNC_STATUS) & 0x04,
+			readl(VSYNC_EN) & 0x04 ? "ENABLED" : "DISABLED",
+			clk_get_rate(ebi1_clk));
+}
 
-	atomic_set(&panel->frame_counter, INTERVAL_ADJUSTING);
+static inline void samsung_clear_vsync(void)
+{
+	unsigned val;
+	int retry = 1000;
+
+	while (retry--) {
+		writel((1U << (97 - 95)), VSYNC_CLEAR);
+		wmb();
+		val = readl(VSYNC_STATUS);
+		if (!!(val & 0x04) == 0)
+			break;
+	}
+
+	if (retry == 0)
+		PR_DISP_ERR("%s: clear vsync failed!\n", __func__);
 }
 
 static void
@@ -92,31 +125,38 @@ samsung_request_vsync(struct msm_panel_data *panel_data,
 	struct msm_mddi_client_data *client_data = panel->client_data;
 
 	panel->fb_callback = callback;
-	if (panel->samsung_got_int) {
-		panel->samsung_got_int = 0;
-		client_data->activate_link(client_data); /* clears interrupt */
+	client_data->activate_link(client_data); /* clears interrupt */
+
+	if (atomic_read(&panel->depth) <= 0) {
+		atomic_inc(&panel->depth);
+		samsung_clear_vsync();
+		enable_irq(gpio_to_irq(97));
 	}
 }
 
-static void samsung_wait_vsync(struct msm_panel_data *panel_data)
+static int samsung_wait_vsync(void *data)
 {
-	struct panel_info *panel = container_of(panel_data, struct panel_info,
-						panel_data);
-	struct msm_mddi_client_data *client_data = panel->client_data;
+	struct panel_info *panel = (struct panel_info *)data;
 
-	if (panel->samsung_got_int) {
-		panel->samsung_got_int = 0;
-		client_data->activate_link(client_data); /* clears interrupt */
+	int rc;
+	panel->vsync_counter = VSYNC_COUNTER;
+
+	while (!kthread_should_stop()) {
+		rc = wait_event_interruptible(samsung_vsync_wait,
+				panel->samsung_got_int &&
+				panel->fb_callback);
+		if (rc != 0)
+			continue;
+
+		--(panel->vsync_counter);
+
+		if (panel->vsync_counter <= 0)
+			samsung_sendout_region(panel);
+		else
+			samsung_update_framedata(panel);
 	}
-
-	if (wait_event_timeout(samsung_vsync_wait, panel->samsung_got_int,
-				HZ/2) == 0)
-		PR_DISP_ERR("timeout waiting for VSYNC\n");
-
-	panel->samsung_got_int = 0;
-	/* interrupt clears when screen dma starts */
+	do_exit(0);
 }
-
 
 /* -------------------------------------------------------------------------- */
 
@@ -190,19 +230,13 @@ static irqreturn_t samsung_vsync_interrupt(int irq, void *data)
 {
 	struct panel_info *panel = data;
 
+	if (atomic_read(&panel->depth) > 0) {
+		atomic_dec(&panel->depth);
+		disable_irq(gpio_to_irq(97));
+	}
+
 	panel->samsung_got_int = 1;
-
-	if (atomic_dec_and_test(&panel->frame_counter)) {
-		schedule_work(&panel->adjust_panel_work);
-		return IRQ_HANDLED;
-	}
-
-	if (panel->fb_callback  && atomic_read(&panel->frame_counter) > 0) {
-		panel->fb_callback->func(panel->fb_callback);
-		panel->fb_callback = NULL;
-	}
 	wake_up(&samsung_vsync_wait);
-
 	return IRQ_HANDLED;
 }
 
@@ -210,6 +244,7 @@ static int setup_vsync(struct panel_info *panel, int init)
 {
 	int ret;
 	int gpio = 97;
+	uint32_t config;
 	unsigned int irq;
 
 	if (!init) {
@@ -220,14 +255,21 @@ static int setup_vsync(struct panel_info *panel, int init)
 	if (ret)
 		goto err_request_gpio_failed;
 
+	config = PCOM_GPIO_CFG(97, 1, GPIO_INPUT, GPIO_PULL_DOWN, GPIO_2MA);
+	ret = msm_proc_comm(PCOM_RPC_GPIO_TLMM_CONFIG_EX, &config, 0);
+	if (ret)
+		goto err_gpio_direction_input_failed;
+
 	ret = irq = gpio_to_irq(gpio);
 	if (ret < 0)
 		goto err_get_irq_num_failed;
 
-	ret = request_irq(irq, samsung_vsync_interrupt, IRQF_TRIGGER_RISING,
+	samsung_clear_vsync();
+	ret = request_irq(irq, samsung_vsync_interrupt, IRQF_TRIGGER_HIGH,
 			"vsync", panel);
 	if (ret)
 		goto err_request_irq_failed;
+	disable_irq(irq);
 
 	PR_DISP_INFO("vsync on gpio %d now %d\n", gpio,
 			gpio_get_value(gpio));
@@ -237,6 +279,7 @@ uninit:
 	free_irq(gpio_to_irq(gpio), panel->client_data);
 err_request_irq_failed:
 err_get_irq_num_failed:
+err_gpio_direction_input_failed:
 	gpio_free(gpio);
 err_request_gpio_failed:
 	return ret;
@@ -269,13 +312,13 @@ static int mddi_samsung_probe(struct platform_device *pdev)
 	panel->client_data = client_data;
 	panel->panel_data.suspend = samsung_suspend;
 	panel->panel_data.resume = samsung_resume;
-	panel->panel_data.wait_vsync = samsung_wait_vsync;
 	panel->panel_data.request_vsync = samsung_request_vsync;
 	panel->panel_data.blank = samsung_blank;
 	panel->panel_data.unblank = samsung_unblank;
 	panel->panel_data.dump_vsync = samsung_dump_vsync;
 	panel->panel_data.fb_data = &bridge_data->fb_data;
 	panel->panel_data.caps = ~MSMFB_CAP_PARTIAL_UPDATES;
+	atomic_set(&panel->depth, 0);
 	panel->pdev.name = "msm_panel";
 	panel->pdev.id = pdev->id;
 	panel->pdev.resource = client_data->fb_resource;
@@ -286,9 +329,7 @@ static int mddi_samsung_probe(struct platform_device *pdev)
 	/*for debugging vsync issue*/
 	ebi1_clk = clk_get(NULL, "ebi1_clk");
 
-	INIT_WORK(&panel->adjust_panel_work, samsung_adjust_work);
-	atomic_set(&panel->frame_counter, INTERVAL_ADJUSTING);
-
+	kthread_run(samsung_wait_vsync, panel, "ksamsung");
 	return 0;
 
 err_panel:
