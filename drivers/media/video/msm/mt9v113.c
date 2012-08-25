@@ -1622,10 +1622,8 @@ int mt9v113_sensor_open_init(struct msm_camera_sensor_info *data)
 
 	/* Input MCLK = 24MHz */
 	msm_camio_clk_rate_set(24000000);
-	pr_info("[CAM]mt9v113_sensor_open_init after msm_camio_clk_rate_set");
 	msleep(3);
 	data->pdata->camera_gpio_on();
-	pr_info("[CAM]mt9v113_sensor_open_init after camera_gpio_on");
 
 #ifndef CONFIG_MSM_CAMERA_8X60
 	msm_camio_camif_pad_reg_reset();
@@ -1758,9 +1756,6 @@ int mt9v113_sensor_release(void)
 	}
 
 	msleep(1);
-
-	kfree(mt9v113_ctrl);
-	mt9v113_ctrl=NULL;
 
 	return rc;
 }
