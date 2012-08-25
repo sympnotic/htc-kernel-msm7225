@@ -16,7 +16,6 @@
 #include <linux/kernel.h>
 #include <asm/io.h>
 #include <linux/msm_mdp.h>
-#include <mach/debug_display.h>
 
 #include "mdp_hw.h"
 #include "mdp_ppp.h"
@@ -962,7 +961,8 @@ static int scale_params(uint32_t dim_in, uint32_t dim_out, uint32_t origin,
 		return -1;
 	do_div(n, d);
 	k3 = (n + 1) >> 1;
-
+	if ((k3 >> 4) < (1LL << 27) || (k3 >> 4) > (1LL << 31))
+		return -1;
 
 	n = ((uint64_t)dim_in) << 34;
 	d = (uint64_t)dim_out;
@@ -1023,27 +1023,6 @@ int mdp_ppp_cfg_scale(struct mdp_info *mdp, struct ppp_regs *regs,
 	int downscale;
 	uint32_t phase_init_x, phase_init_y, phase_step_x, phase_step_y;
 	uint32_t scale_factor_x, scale_factor_y;
-	uint32_t temp_src, temp_dst;
-	int64_t temp_k;
-	uint64_t temp_n, temp_d;
-
-	/* check scale factor for legal range [0.25 - 4.0] */
-	if( src_rect->w > src_rect->h )
-		temp_src = src_rect->w;
-	else
-		temp_src = src_rect->h;
-
-	if( dst_rect->w > dst_rect->h )
-		temp_dst = dst_rect->w;
-	else
-		temp_dst = dst_rect->h;
-
-	temp_n = ((uint64_t)temp_dst) << 34;
-	temp_d = temp_src;
-	do_div(temp_n, temp_d);
-	temp_k = (temp_n + 1) >> 1;
-	if ((temp_k >> 4) < (1LL << 27))
-		return -1;
 
 	if (scale_params(src_rect->w, dst_rect->w, 1, &phase_init_x,
 			 &phase_step_x) ||
@@ -1103,45 +1082,20 @@ int mdp_ppp_load_blur(struct mdp_info *mdp)
 	return 0;
 }
 
-#define MDP_SCALE_CFG_RETRY	3
 void mdp_ppp_init_scale(struct mdp_info *mdp)
 {
-	int i, r;
-
 	downscale_x_table = MDP_DOWNSCALE_MAX;
 	downscale_y_table = MDP_DOWNSCALE_MAX;
 
-	for (i = 0; i < ARRAY_SIZE(mdp_upscale_table); i++) {
-		mdp_writel(mdp, mdp_upscale_table[i].val,
-				mdp_upscale_table[i].reg);
-		/* Workaround for MDP defect(couples of lines presented in
-		 * ROI while scaling up image) based on QCT's suggestion
-		 */
-		for(r = 0 ; r < MDP_SCALE_CFG_RETRY ; r++) {
-			if (mdp_readl(mdp, mdp_upscale_table[i].reg) ==
-					mdp_upscale_table[i].val)
-				break ;
-			PR_DISP_ERR("MDP: failed to config PPP up scale coefficients"
-					" table: reg=0x%08X, val=0x%08X\n",
-					mdp_upscale_table[i].reg,
-					mdp_upscale_table[i].val);
-			mdp_writel(mdp, mdp_upscale_table[i].val,
-					mdp_upscale_table[i].reg);
-		}
-		if (MDP_SCALE_CFG_RETRY == r) {
-			PR_DISP_ERR("MDP: PPP is defective and unrepairable!\n");
-			BUG();
-		}
-	}
+	load_table(mdp, mdp_upscale_table, ARRAY_SIZE(mdp_upscale_table));
 }
-
 
 int mdp_ppp_validate_blit(struct mdp_info *mdp, struct mdp_blit_req *req)
 {
 	/* WORKAROUND FOR HARDWARE BUG IN BG TILE FETCH */
 	if (unlikely(req->src_rect.h == 0 ||
 		     req->src_rect.w == 0)) {
-		PR_DISP_INFO("mdp_ppp: src img of zero size!\n");
+		pr_info("mdp_ppp: src img of zero size!\n");
 		return -EINVAL;
 	}
 	if (unlikely(req->dst_rect.h == 0 ||

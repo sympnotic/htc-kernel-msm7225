@@ -142,22 +142,6 @@ static int renesas_unblank(struct msm_panel_data *panel_data)
 	return bridge_data->unblank(bridge_data, client_data);
 }
 
-static int renesas_recover(struct msm_panel_data *panel_data)
-{
-	struct panel_info *panel = container_of(panel_data, struct panel_info,
-						panel_data);
-	struct msm_mddi_client_data *client_data = panel->client_data;
-
-	struct msm_mddi_bridge_platform_data *bridge_data =
-		client_data->private_client_data;
-	int ret;
-
-	ret = bridge_data->init(bridge_data, client_data);
-	if (ret)
-		return ret;
-	return 0;
-}
-
 static irqreturn_t renesas_vsync_interrupt(int irq, void *data)
 {
 	struct panel_info *panel = data;
@@ -256,8 +240,6 @@ static int mddi_renesas_probe(struct platform_device *pdev)
 	panel->panel_data.unblank = renesas_unblank;
 	panel->panel_data.fb_data =  &bridge_data->fb_data;
 	panel->panel_data.caps = MSMFB_CAP_PARTIAL_UPDATES;
-	panel->panel_data.recover_vsync = renesas_recover;
-
 	panel->pdev.name = "msm_panel";
 	panel->pdev.id = pdev->id;
 	panel->pdev.resource = client_data->fb_resource;
