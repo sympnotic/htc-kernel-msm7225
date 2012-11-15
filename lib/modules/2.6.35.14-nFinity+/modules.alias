@@ -1,0 +1,4 @@
+# Aliases extracted from modules themselves.
+alias sdio:c*v02D0d4334* brcmfmac
+alias sdio:c*v02D0d4330* brcmfmac
+alias sdio:c*v02D0d4329* brcmfmac
