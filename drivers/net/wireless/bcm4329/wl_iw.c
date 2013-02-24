@@ -1432,12 +1432,6 @@ wl_iw_set_pno_set(
 		str_ptr += sizeof(cmd_tlv_t);
 		tlv_size_left  -= sizeof(cmd_tlv_t);
 
-		if ((nssid = wl_iw_parse_ssid_list_tlv(&str_ptr, ssids_local, \
-				MAX_PFN_LIST_COUNT, &tlv_size_left)) <= 0) {
-			WL_ERROR(("SSID is not presented or corrupted ret=%d\n", nssid));
-			goto exit_proc;
-		}
-		else {
 			if ((str_ptr[0] != PNO_TLV_TYPE_TIME) || (tlv_size_left <= 1)) {
 				WL_ERROR(("%s scan duration corrupted field size %d\n", \
 						__FUNCTION__, tlv_size_left));
@@ -1466,7 +1460,7 @@ wl_iw_set_pno_set(
 				WL_PNO(("%s: pno_freq_expo_max=%d\n", \
 							__FUNCTION__, pno_freq_expo_max));
 			}
-		}
+		
 	}
 	else {
 		WL_ERROR(("%s get wrong TLV command\n", __FUNCTION__));
@@ -6050,12 +6044,7 @@ wl_iw_set_cscan(
 		tlv_size_left  -= sizeof(cscan_tlv_t);
 
 		
-		if ((nssid = wl_iw_parse_ssid_list_tlv(&str_ptr, ssids_local, \
-				WL_SCAN_PARAMS_SSID_MAX, &tlv_size_left)) <= 0) {
-			WL_ERROR(("SSID is not presented or corrupted ret=%d\n", nssid));
-			goto exit_proc;
-		}
-		else {
+		if {
 			
 			memset(iscan->iscan_ex_params_p, 0, iscan->iscan_ex_param_size);
 
