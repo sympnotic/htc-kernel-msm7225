@@ -218,7 +218,7 @@ static int octeon_i2c_wait(struct octeon_i2c *i2c)
 		return result;
 	} else if (result == 0) {
 		dev_dbg(i2c->dev, "%s: timeout\n", __func__);
-		return -ETIMEDOUT;
+		result = -ETIMEDOUT;
 	}
 
 	return 0;
