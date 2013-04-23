@@ -643,6 +643,7 @@ static int mt9p012_setting(enum mt9p012_reg_update rupdate,
 				 MT9P012_RESET_REGISTER_PWON},
 			};
 
+#if 0
 			struct mt9p012_i2c_reg_conf ipc_tbl2[] = {
 				{MT9P012_REG_RESET_REGISTER,
 				 MT9P012_RESET_REGISTER_PWOFF},
@@ -682,6 +683,7 @@ static int mt9p012_setting(enum mt9p012_reg_update rupdate,
 				{MT9P012_REG_RESET_REGISTER,
 				 MT9P012_RESET_REGISTER_PWON},
 			};
+#endif
 
 			struct mt9p012_i2c_reg_conf ipc_tbl3[] = {
 				{REG_GROUPED_PARAMETER_HOLD,

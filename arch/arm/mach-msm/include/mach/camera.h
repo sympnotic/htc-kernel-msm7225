@@ -195,7 +195,7 @@ struct msm_camvpe_fn {
 };
 
 struct msm_sensor_ctrl {
-	int (*s_init)(struct msm_camera_sensor_info *);
+	int (*s_init)(const struct msm_camera_sensor_info *);
 	int (*s_release)(void);
 	int (*s_config)(void __user *);
 	int node;
@@ -384,7 +384,7 @@ int msm_camvfe_check(void *);
 void msm_camvfe_fn_init(struct msm_camvfe_fn *, void *);
 void msm_camvpe_fn_init(struct msm_camvpe_fn *, void *);
 int msm_camera_drv_start(struct platform_device *dev,
-		int (*sensor_probe)(struct msm_camera_sensor_info *,
+		int (*sensor_probe)(const struct msm_camera_sensor_info *,
 					struct msm_sensor_ctrl *));
 
 enum msm_camio_clk_type {
