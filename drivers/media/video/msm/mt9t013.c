@@ -24,7 +24,6 @@
 #include <linux/kernel.h>
 #include <linux/slab.h>
 #include <media/msm_camera.h>
-#include <media/msm_camera_sensor.h>
 #include <mach/gpio.h>
 #include <mach/camera.h>
 #include <asm/mach-types.h>
@@ -1199,7 +1198,7 @@ static void mt9t013_poweroff_af(void)
 	gpio_free(mt9t013_ctrl->sensordata->vcm_pwd);
 }
 
-static int mt9t013_sensor_open_init(struct msm_camera_sensor_info *data)
+int mt9t013_sensor_open_init(const struct msm_camera_sensor_info *data)
 {
 	int rc;
 
@@ -1456,7 +1455,7 @@ static struct i2c_driver mt9t013_i2c_driver = {
 		   },
 };
 
-static int mt9t013_sensor_probe(struct msm_camera_sensor_info *info,
+static int mt9t013_sensor_probe(const struct msm_camera_sensor_info *info,
 				struct msm_sensor_ctrl *s)
 {
 	/* We expect this driver to match with the i2c device registered
