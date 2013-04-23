@@ -1,9 +1,0 @@
-updates/net/wireless/lib80211_crypt_wep.ko: updates/net/wireless/lib80211.ko updates/compat/compat.ko
-updates/net/wireless/lib80211_crypt_tkip.ko: updates/net/wireless/lib80211.ko updates/compat/compat.ko
-updates/net/wireless/lib80211_crypt_ccmp.ko: updates/net/wireless/lib80211.ko updates/compat/compat.ko
-updates/net/wireless/lib80211.ko: updates/compat/compat.ko
-updates/net/wireless/cfg80211.ko: updates/compat/compat.ko
-updates/net/mac80211/mac80211.ko: updates/net/wireless/cfg80211.ko updates/compat/compat.ko
-updates/drivers/net/wireless/brcm80211/brcmutil/brcmutil.ko:
-updates/drivers/net/wireless/brcm80211/brcmfmac/brcmfmac.ko: updates/drivers/net/wireless/brcm80211/brcmutil/brcmutil.ko updates/net/wireless/cfg80211.ko updates/compat/compat.ko
-updates/compat/compat.ko:
