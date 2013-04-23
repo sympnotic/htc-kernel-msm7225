@@ -352,6 +352,7 @@ static irqreturn_t mddi_isr(int irq, void *data)
 	}
 
 	mddi_writel(mddi->int_enable, INTEN);
+	wmb();
 	spin_unlock(&mddi->int_lock);
 
 	return IRQ_HANDLED;
@@ -366,6 +367,7 @@ static long mddi_wait_interrupt_timeout(struct mddi_info *mddi,
 	mddi->got_int &= ~intmask;
 	mddi->int_enable |= intmask;
 	mddi_writel(mddi->int_enable, INTEN);
+	wmb();
 	spin_unlock_irqrestore(&mddi->int_lock, irq_flags);
 	return wait_event_timeout(mddi->int_wait, mddi->got_int & intmask,
 				  timeout);
@@ -524,7 +526,7 @@ static void mddi_resume(struct msm_mddi_client_data *cdata)
 
 static int __init mddi_get_client_caps(struct mddi_info *mddi)
 {
-#if !defined(CONFIG_ARCH_MSM7X30)
+#if !defined(CONFIG_ARCH_MSM7X30) && !defined(CONFIG_ARCH_MSM7227)
 	int i, j;
 #endif
 	/* clear any stale interrupts */
@@ -541,7 +543,7 @@ static int __init mddi_get_client_caps(struct mddi_info *mddi)
 	mddi_writel(MDDI_CMD_LINK_ACTIVE, CMD);
 	mddi_wait_interrupt(mddi, MDDI_INT_NO_CMD_PKTS_PEND);
 	/*FIXME: mddi host can't get caps on MDDI type 2*/
-#if !defined(CONFIG_ARCH_MSM7X30)
+#if !defined(CONFIG_ARCH_MSM7X30) && !defined(CONFIG_ARCH_MSM7227)
 	if (mddi->type == MSM_MDP_MDDI_TYPE_I) {
 		for (j = 0; j < 3; j++) {
 			/* the toshiba vga panel does not respond to get
@@ -965,7 +967,7 @@ static int mddi_probe(struct platform_device *pdev)
 		PR_DISP_ERR("mddi: no associated mem resource!\n");
 		return -ENOMEM;
 	}
-	mddi->base = ioremap(resource->start, resource->end - resource->start);
+	mddi->base = ioremap(resource->start, resource_size(resource));
 	if (!mddi->base) {
 		PR_DISP_ERR("mddi: failed to remap base!\n");
 		ret = -EINVAL;

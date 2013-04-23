@@ -337,8 +337,8 @@ restart:
 
 	sleeping = msmfb->sleeping;
 	/* on a full update, if the last frame has not completed, wait for it */
-	if (pan_display && (msmfb->frame_requested != msmfb->frame_done ||
-			    sleeping == UPDATING)) {
+	if ((pan_display && msmfb->frame_requested != msmfb->frame_done) ||
+			    sleeping == UPDATING) {
 		int ret;
 		spin_unlock_irqrestore(&msmfb->update_lock, irq_flags);
 		/* Shorten delay time when apply vsync recover mechanism*/
@@ -805,7 +805,6 @@ static int msmfb_overlay_play(struct fb_info *info, unsigned long *argp)
 	int	ret;
 	struct msmfb_overlay_data req;
 	struct file *p_src_file = 0;
-	struct msmfb_info *msmfb = info->par;
 
 	ret = copy_from_user(&req, argp, sizeof(req));
 	if (ret) {
@@ -815,13 +814,6 @@ static int msmfb_overlay_play(struct fb_info *info, unsigned long *argp)
 	}
 
 	ret = mdp->overlay_play(mdp, info, &req, &p_src_file);
-
-	if (ret == 0 && (mdp->overrides & MSM_MDP_FORCE_UPDATE)
-			&& msmfb->sleeping == AWAKE) {
-		msmfb_pan_update(info,
-			0, 0, info->var.xres, info->var.yres,
-			info->var.yoffset, 1);
-	}
 
 	if (p_src_file)
 		put_pmem_file(p_src_file);
@@ -1114,7 +1106,11 @@ static struct file_operations debug_fops = {
 };
 #endif
 
+#if defined(CONFIG_MACH_BAHAMAS) || defined(CONFIG_MACH_BUZZ) || defined(CONFIG_MACH_HERO)
+#define BITS_PER_PIXEL_DEF 16
+#else
 #define BITS_PER_PIXEL_DEF 32
+#endif
 
 static void setup_fb_info(struct msmfb_info *msmfb)
 {
@@ -1130,7 +1126,7 @@ static void setup_fb_info(struct msmfb_info *msmfb)
 
 	fb_info->fix.type = FB_TYPE_PACKED_PIXELS;
 	fb_info->fix.visual = FB_VISUAL_TRUECOLOR;
-	fb_info->fix.line_length = ALIGN(msmfb->xres, 32) * 2;
+	fb_info->fix.line_length = ALIGN(msmfb->xres, 32) * BITS_PER_PIXEL_DEF / 8;
 
 	fb_info->var.xres = msmfb->xres;
 	fb_info->var.yres = msmfb->yres;
@@ -1144,17 +1140,18 @@ static void setup_fb_info(struct msmfb_info *msmfb)
 	fb_info->var.yoffset = 0;
 
 	if (msmfb->panel->caps & MSMFB_CAP_PARTIAL_UPDATES) {
-		/* set the param in the fixed screen, so userspace can't
+		/*
+		 * Set the param in the fixed screen, so userspace can't
 		 * change it. This will be used to check for the
-		 * capability. */
-
-		/* FIX ME: every panel support partial update?
+		 * capability.
+		 */
 		fb_info->fix.reserved[0] = 0x5444;
 		fb_info->fix.reserved[1] = 0x5055;
-		*/
 
-		/* This preloads the value so that if userspace doesn't
-		 * change it, it will be a full update */
+		/*
+		 * This preloads the value so that if userspace doesn't
+		 * change it, it will be a full update
+		 */
 		fb_info->var.reserved[0] = 0x54445055;
 		fb_info->var.reserved[1] = 0;
 		fb_info->var.reserved[2] = (uint16_t)msmfb->xres |
