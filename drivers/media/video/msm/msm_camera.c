@@ -2737,7 +2737,7 @@ EXPORT_SYMBOL(msm_v4l2_unregister);
 
 static int msm_sync_init(struct msm_sync *sync,
 		struct platform_device *pdev,
-		int (*sensor_probe)(const struct msm_camera_sensor_info *,
+		int (*sensor_probe)(struct msm_camera_sensor_info *,
 				struct msm_sensor_ctrl *), int camera_node)
 {
 	int rc = 0;
@@ -2831,7 +2831,7 @@ static int msm_device_init(struct msm_cam_device *pmsm,
 }
 
 int msm_camera_drv_start(struct platform_device *dev,
-		int (*sensor_probe)(const struct msm_camera_sensor_info *,
+		int (*sensor_probe)(struct msm_camera_sensor_info *,
 			struct msm_sensor_ctrl *))
 {
 	struct msm_cam_device *pmsm = NULL;
