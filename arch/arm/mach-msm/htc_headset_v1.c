@@ -1262,8 +1262,6 @@ static void button_work(struct work_struct *work)
 			break;
 		} /* end switch */
 	}
-
-	return;
 }
 
 static enum hrtimer_restart detect_event_timer_func(struct hrtimer *data)
