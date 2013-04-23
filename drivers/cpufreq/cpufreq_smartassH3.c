@@ -1,5 +1,5 @@
 /*
- * drivers/cpufreq/cpufreq_smartass2.c
+ * drivers/cpufreq/cpufreq_smartassH3.c
  *
  * Copyright (C) 2010 Google, Inc.
  *
@@ -18,6 +18,8 @@
  * which was adaptated to 2.6.29 kernel by Nadlabak (pavel@doshaska.net)
  *
  * SMP support based on mod by faux123
+ *
+ * ZTE Skate specific tweaks by H3ROS @ MoDaCo, integrated by C3C0 @ MoDaCo
  *
  * For a general overview of smartassV2 see the relavent part in
  * Documentation/cpu-freq/governors.txt
@@ -43,7 +45,7 @@
  * towards the ideal frequency and slower after it has passed it. Similarly,
  * lowering the frequency towards the ideal frequency is faster than below it.
  */
-#define DEFAULT_AWAKE_IDEAL_FREQ 518400
+#define DEFAULT_AWAKE_IDEAL_FREQ 320000
 static unsigned int awake_ideal_freq;
 
 /*
@@ -52,7 +54,7 @@ static unsigned int awake_ideal_freq;
  * that practically when sleep_ideal_freq==0 the awake_ideal_freq is used
  * also when suspended).
  */
-#define DEFAULT_SLEEP_IDEAL_FREQ 352000
+#define DEFAULT_SLEEP_IDEAL_FREQ 122880
 static unsigned int sleep_ideal_freq;
 
 /*
@@ -60,7 +62,7 @@ static unsigned int sleep_ideal_freq;
  * Zero disables and causes to always jump straight to max frequency.
  * When below the ideal freqeuncy we always ramp up to the ideal freq.
  */
-#define DEFAULT_RAMP_UP_STEP 128000
+#define DEFAULT_RAMP_UP_STEP 80000
 static unsigned int ramp_up_step;
 
 /*
@@ -68,19 +70,19 @@ static unsigned int ramp_up_step;
  * Zero disables and will calculate ramp down according to load heuristic.
  * When above the ideal freqeuncy we always ramp down to the ideal freq.
  */
-#define DEFAULT_RAMP_DOWN_STEP 256000
+#define DEFAULT_RAMP_DOWN_STEP 80000
 static unsigned int ramp_down_step;
 
 /*
  * CPU freq will be increased if measured load > max_cpu_load;
  */
-#define DEFAULT_MAX_CPU_LOAD 50
+#define DEFAULT_MAX_CPU_LOAD 85
 static unsigned long max_cpu_load;
 
 /*
  * CPU freq will be decreased if measured load < min_cpu_load;
  */
-#define DEFAULT_MIN_CPU_LOAD 25
+#define DEFAULT_MIN_CPU_LOAD 70
 static unsigned long min_cpu_load;
 
 /*
@@ -94,7 +96,7 @@ static unsigned long up_rate_us;
  * The minimum amount of time to spend at a frequency before we can ramp down.
  * Notice we ignore this when we are above the ideal frequency.
  */
-#define DEFAULT_DOWN_RATE_US 99000;
+#define DEFAULT_DOWN_RATE_US 49000;
 static unsigned long down_rate_us;
 
 /*
@@ -158,15 +160,15 @@ enum {
  */
 static unsigned long debug_mask;
 
-static int cpufreq_governor_smartass(struct cpufreq_policy *policy,
+static int cpufreq_governor_smartass_h3(struct cpufreq_policy *policy,
 		unsigned int event);
 
-#ifndef CONFIG_CPU_FREQ_DEFAULT_GOV_SMARTASS2
+#ifndef CONFIG_CPU_FREQ_DEFAULT_GOV_SMARTASSH3
 static
 #endif
-struct cpufreq_governor cpufreq_gov_smartass2 = {
-	.name = "smartassV2",
-	.governor = cpufreq_governor_smartass,
+struct cpufreq_governor cpufreq_gov_smartass_h3 = {
+	.name = "SmartassH3",
+	.governor = cpufreq_governor_smartass_h3,
 	.max_transition_latency = 9000000,
 	.owner = THIS_MODULE,
 };
@@ -659,10 +661,10 @@ static struct attribute * smartass_attributes[] = {
 
 static struct attribute_group smartass_attr_group = {
 	.attrs = smartass_attributes,
-	.name = "smartass",
+	.name = "smartassH3",
 };
 
-static int cpufreq_governor_smartass(struct cpufreq_policy *new_policy,
+static int cpufreq_governor_smartass_h3(struct cpufreq_policy *new_policy,
 		unsigned int event)
 {
 	unsigned int cpu = new_policy->cpu;
@@ -836,7 +838,7 @@ static int __init cpufreq_smartass_init(void)
 	}
 
 	// Scale up is high priority
-	up_wq = create_rt_workqueue("ksmartass_up");
+	up_wq = create_workqueue("ksmartass_up");
 	down_wq = create_workqueue("ksmartass_down");
 	if (!up_wq || !down_wq)
 		return -ENOMEM;
@@ -845,10 +847,10 @@ static int __init cpufreq_smartass_init(void)
 
 	register_early_suspend(&smartass_power_suspend);
 
-	return cpufreq_register_governor(&cpufreq_gov_smartass2);
+	return cpufreq_register_governor(&cpufreq_gov_smartass_h3);
 }
 
-#ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_SMARTASS2
+#ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_SMARTASSH3
 fs_initcall(cpufreq_smartass_init);
 #else
 module_init(cpufreq_smartass_init);
@@ -856,13 +858,14 @@ module_init(cpufreq_smartass_init);
 
 static void __exit cpufreq_smartass_exit(void)
 {
-	cpufreq_unregister_governor(&cpufreq_gov_smartass2);
+	cpufreq_unregister_governor(&cpufreq_gov_smartass_h3);
 	destroy_workqueue(up_wq);
 	destroy_workqueue(down_wq);
 }
 
 module_exit(cpufreq_smartass_exit);
 
-MODULE_AUTHOR ("Erasmux");
-MODULE_DESCRIPTION ("'cpufreq_smartass2' - A smart cpufreq governor");
+MODULE_AUTHOR ("Erasmux, moded by H3ROS & C3C0");
+MODULE_DESCRIPTION ("'cpufreq_smartassH3' - A smart cpufreq governor");
 MODULE_LICENSE ("GPL");
+

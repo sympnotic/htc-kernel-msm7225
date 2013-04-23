@@ -106,11 +106,11 @@ config CPU_FREQ_DEFAULT_GOV_SMARTASS
 	help
 	  Use the CPUFreq governor 'smartass' as default.
 
-config CPU_FREQ_DEFAULT_GOV_SMARTASS2
-	bool "smartass2"
-	select CPU_FREQ_GOV_SMARTASS2
+config CPU_FREQ_DEFAULT_GOV_SMARTASSH3
+	bool "smartassH3"
+	select CPU_FREQ_GOV_SMARTASSH3
 	help
-	  Use the CPUFreq governor 'smartassV2' as default.
+	  Use the CPUFreq governor 'smartassH3' as default.
 
 config CPU_FREQ_DEFAULT_GOV_SAVAGEDZEN
 	bool "savagedzen"
@@ -225,11 +225,11 @@ config CPU_FREQ_GOV_SMARTASS
 
 	  If in doubt, say N.
 
-config CPU_FREQ_GOV_SMARTASS2
-	tristate "'smartassV2' cpufreq governor"
+config CPU_FREQ_GOV_SMARTASSH3
+	tristate "'smartassH3' cpufreq governor"
 	depends on CPU_FREQ
 	help
-	  'smartassV2' - a "smart" optimized governor for the hero!
+	  'smartassH3' - a "smartassV2 with tweaks by H3ROS" governor!
 
 	  If in doubt, say N.
 
