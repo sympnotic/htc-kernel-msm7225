@@ -513,13 +513,6 @@ static void mdp_dma_to_mddi(void *priv, uint32_t addr, uint32_t stride,
 	} else if (mdp->mdp_dev.color_format == MSM_MDP_OUT_IF_FMT_RGB666) {
 		dma2_cfg |= DMA_DSTC0G_6BITS | DMA_DSTC1B_6BITS | DMA_DSTC2R_6BITS;
 		video_packet_parameter = MDDI_VDO_PACKET_DESC_RGB666;
-<<<<<<< HEAD
-=======
-	} else {
-		dma2_cfg |= DMA_IBUF_FORMAT_XRGB8888;
-		dma2_cfg |= DMA_DSTC0G_8BITS | DMA_DSTC1B_8BITS | DMA_DSTC2R_8BITS;
-		video_packet_parameter = MDDI_VDO_PACKET_DESC_RGB888;
->>>>>>> 5f54204... Update KGSL and add genlock, kgsl and genlock
 	}
 
 
@@ -591,29 +584,12 @@ void mdp_dma(struct mdp_device *mdp_dev, uint32_t addr, uint32_t stride,
 	spin_lock_irqsave(&mdp->lock, flags);
 	if (locked_enable_mdp_irq(mdp, out_if->dma_mask)) {
 		mdp_dma_user_requested++;
-<<<<<<< HEAD
                 if (mdp_dma_user_requested > 2) {
-=======
-                if (mdp_dma_user_requested > 4) {
->>>>>>> 5f54204... Update KGSL and add genlock, kgsl and genlock
                         PR_DISP_ERR("%s: really busy? start dma timer\n", __func__);
 			/* something wrong in dma, workaround it */
 			mdp_dma_timer_enable = 1;
 			mdp_dma_user_requested = 0;
-<<<<<<< HEAD
                 } else {
-=======
-		}
-		else if(mdp_dma_user_requested > 3){
-			mdelay(50);
-			PR_DISP_ERR("%s: busy 3\n", __func__);
-		}
-		else if(mdp_dma_user_requested > 2){
-			mdelay(30);
-			PR_DISP_ERR("%s: busy 2\n", __func__);
-		}
-                else{
->>>>>>> 5f54204... Update KGSL and add genlock, kgsl and genlock
 			PR_DISP_ERR("%s: busy\n", __func__);
 			goto done;
 		}

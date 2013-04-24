@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 /*
  * (C) Copyright Advanced Micro Devices, Inc. 2002, 2007
  * Copyright (c) 2008-2009 QUALCOMM USA, INC.
@@ -1822,5 +1821,3 @@ kgsl_drawctxt_switch(struct kgsl_device *device, struct kgsl_drawctxt *drawctxt,
 		kgsl_mmu_setstate(device, device->mmu.defaultpagetable);
 	KGSL_CTXT_INFO("return\n");
 }
-=======
->>>>>>> 5f54204... Update KGSL and add genlock, kgsl and genlock
