@@ -31,7 +31,4 @@ int msm_fiq_set_handler(void (*func)(void *data, void *regs, void *svc_sp),
 /* cause an edge triggered interrupt to fire (safe from FIQ context */
 void msm_trigger_irq(int number);
 
-extern unsigned char fiq_glue, fiq_glue_end;
-void fiq_glue_setup(void *func, void *data, void *sp);
-
 #endif

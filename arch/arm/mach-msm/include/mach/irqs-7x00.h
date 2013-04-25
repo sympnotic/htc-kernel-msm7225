@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2007 Google, Inc.
- * Copyright (c) 2009-2011, Code Aurora Forum. All rights reserved.
+ * Copyright (c) 2009, Code Aurora Forum. All rights reserved.
  * Author: Brian Swetland <swetland@google.com>
  */
 
@@ -69,10 +69,7 @@
 /* 22-31 are reserved */
 
 #define NR_MSM_IRQS 64
-#define NR_SIRC_IRQS 0
 #define NR_GPIO_IRQS 122
 #define NR_BOARD_IRQS 64
-#define NR_MICROP_IRQS 16
 
-#define INT_ADSP_A11_SMSM    INT_ADSP_A11
 #endif
